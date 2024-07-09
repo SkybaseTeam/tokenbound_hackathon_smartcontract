@@ -23,3 +23,13 @@ trait IAccount<TContractState> {
     fn is_locked(self: @TContractState) -> (bool, u64);
     fn supports_interface(self: @TContractState, interface_id: felt252) -> bool;
 }
+
+#[starknet::interface]
+trait IAccountCamel<TContractState> {
+    fn isValidSignature(
+        self: @TContractState, hash: felt252, signature: Span<felt252>
+    ) -> felt252;
+    fn isValidSigner(self: @TContractState, signer: ContractAddress) -> felt252;
+    fn isLocked(self: @TContractState) -> (bool, u64);
+    fn supportsInterface(self: @TContractState, interface_id: felt252) -> bool;
+}

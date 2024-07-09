@@ -1,5 +1,5 @@
 [package]
-name = "tba"
+name = "token_bound_accounts"
 version = "0.1.0"
 edition = "2023_01"
 cairo-version = "2.5.4"

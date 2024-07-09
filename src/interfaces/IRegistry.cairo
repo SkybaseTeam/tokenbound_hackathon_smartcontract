@@ -6,17 +6,38 @@ trait IRegistry<TContractState> {
         ref self: TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        token_id: u256
+        token_id: u256,
+        salt: felt252
     ) -> ContractAddress;
     fn get_account(
         self: @TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        token_id: u256
+        token_id: u256,
+        salt: felt252
     ) -> ContractAddress;
     fn total_deployed_accounts(
-        self: @TContractState,
+        self: @TContractState, token_contract: ContractAddress, token_id: u256
+    ) -> u8;
+}
+
+#[starknet::interface]
+trait IRegistryCamel<TContractState> {
+    fn createAccount(
+        ref self: TContractState,
+        implementation_hash: felt252,
         token_contract: ContractAddress,
-        token_id: u256
+        token_id: u256,
+        salt: felt252
+    ) -> ContractAddress;
+    fn getAccount(
+        self: @TContractState,
+        implementation_hash: felt252,
+        token_contract: ContractAddress,
+        token_id: u256,
+        salt: felt252
+    ) -> ContractAddress;
+    fn totalDeployedAccounts(
+        self: @TContractState, token_contract: ContractAddress, token_id: u256
     ) -> u8;
 }

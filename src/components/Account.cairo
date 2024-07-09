@@ -1,4 +1,3 @@
-
 #[starknet::component]
 mod AccountComponent {
     use core::num::traits::zero::Zero;
@@ -6,8 +5,8 @@ mod AccountComponent {
         get_tx_info, get_caller_address, get_contract_address, get_block_timestamp, ContractAddress,
         account::Call, call_contract_syscall, replace_class_syscall, ClassHash, SyscallResultTrait
     };
-    use tba::interfaces::IAccount::{
-        IAccount, IAccountDispatcherTrait, IAccountDispatcher, TBA_INTERFACE_ID
+    use token_bound_accounts::interfaces::IAccount::{
+        IAccount, IAccountCamel, IAccountDispatcherTrait, IAccountDispatcher, TBA_INTERFACE_ID
     };
 
     #[storage]
@@ -61,6 +60,49 @@ mod AccountComponent {
         const UNAUTHORIZED: felt252 = 'Account: unauthorized';
         const INV_SIG_LEN: felt252 = 'Account: invalid sig length';
         const INV_SIGNATURE: felt252 = 'Account: invalid signature';
+    }
+
+    #[embeddable_as(AccountCamelImpl)]
+    impl AccountCamel<
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>
+    > of IAccountCamel<ComponentState<TContractState>> {
+        /// @notice used for signature validation
+        /// @param hash The message hash 
+        /// @param signature The signature to be validated
+        fn isValidSignature(
+            self: @ComponentState<TContractState>, hash: felt252, signature: Span<felt252>
+        ) -> felt252 {
+            self._is_valid_signature(hash, signature)
+        }
+
+        /// @notice used to validate signer
+        /// @param signer address to be validated
+        fn isValidSigner(
+            self: @ComponentState<TContractState>, signer: ContractAddress
+        ) -> felt252 {
+            if self._is_valid_signer(signer) {
+                return starknet::VALIDATED;
+            } else {
+                return 0;
+            }
+        }
+
+        // @notice returns account lock status and time left until account unlocks
+        fn isLocked(self: @ComponentState<TContractState>) -> (bool, u64) {
+            return self._is_locked();
+        }
+
+        // @notice check that account supports TBA interface
+        // @param interface_id interface to be checked against
+        fn supportsInterface(
+            self: @ComponentState<TContractState>, interface_id: felt252
+        ) -> bool {
+            if (interface_id == TBA_INTERFACE_ID) {
+                return true;
+            } else {
+                return false;
+            }
+        }
     }
 
     #[embeddable_as(AccountImpl)]
@@ -184,7 +226,7 @@ mod AccountComponent {
     }
 
     #[generate_trait]
-    pub impl InternalImpl<
+    impl InternalImpl<
         TContractState, +HasComponent<TContractState>, +Drop<TContractState>
     > of InternalTrait<TContractState> {
         /// @notice initializes the account by setting the initial token contract and token id
