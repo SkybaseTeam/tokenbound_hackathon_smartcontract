@@ -22,6 +22,7 @@ trait IAccount<TContractState> {
     fn lock(ref self: TContractState, duration: u64);
     fn is_locked(self: @TContractState) -> (bool, u64);
     fn supports_interface(self: @TContractState, interface_id: felt252) -> bool;
+    fn change_owner(ref self: TContractState, token_address: ContractAddress, token_id: u256);
 }
 
 #[starknet::interface]
@@ -32,4 +33,5 @@ trait IAccountCamel<TContractState> {
     fn isValidSigner(self: @TContractState, signer: ContractAddress) -> felt252;
     fn isLocked(self: @TContractState) -> (bool, u64);
     fn supportsInterface(self: @TContractState, interface_id: felt252) -> bool;
+    fn changeOwner(ref self: TContractState, token_address: ContractAddress, token_id: u256);
 }

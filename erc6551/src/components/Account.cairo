@@ -103,6 +103,15 @@ mod AccountComponent {
                 return false;
             }
         }
+
+        // @notice change linked nft
+        // @param token_address address of new token contract
+        // @param token_id id of new token
+        fn changeOwner(
+            ref self: ComponentState<TContractState>, token_address: ContractAddress, token_id: u256
+        ) {
+
+        }
     }
 
     #[embeddable_as(AccountImpl)]
@@ -222,6 +231,15 @@ mod AccountComponent {
             } else {
                 return false;
             }
+        }
+
+        // @notice change linked nft
+        // @param token_address address of new token contract
+        // @param token_id id of new token
+        fn change_owner(
+            ref self: ComponentState<TContractState>, token_address: ContractAddress, token_id: u256
+        ) {
+
         }
     }
 
