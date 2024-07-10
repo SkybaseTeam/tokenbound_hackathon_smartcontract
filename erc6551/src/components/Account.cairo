@@ -110,7 +110,7 @@ mod AccountComponent {
         fn changeOwner(
             ref self: ComponentState<TContractState>, token_address: ContractAddress, token_id: u256
         ) {
-
+            
         }
     }
 

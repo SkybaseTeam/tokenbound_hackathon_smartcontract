@@ -10,7 +10,7 @@ trait IAccountCollection<TContractState> {
     fn up_supply(ref self: TContractState, pool: u8, supply: u256);
     fn up_mint_max(ref self: TContractState, pool: u8, supply: u256);
     fn up_price(ref self: TContractState, pool: u8, price: u256);
-    fn mint_nft(ref self: TContractState, pool_mint: u8);
+    fn mint_nft(ref self: TContractState, contract_address: ContractAddress, pool_mint: u8)->u256;
     fn get_remaining_mint(self: @TContractState, pool_mint: u8) -> u256;
     fn get_mint_max(self: @TContractState, pool_mint: u8) -> u256;
     fn get_total_supply(self: @TContractState, pool_mint: u8) -> u256;
@@ -29,7 +29,7 @@ trait IAccountCollectionCamel<TContractState> {
     fn upSupply(ref self: TContractState, pool: u8, supply: u256);
     fn upMintMax(ref self: TContractState, pool: u8, supply: u256);
     fn upPrice(ref self: TContractState, pool: u8, price: u256);
-    fn mintNft(ref self: TContractState, pool_mint: u8);
+    fn mintNft(ref self: TContractState, contract_address: ContractAddress, pool_mint: u8)->u256;
     fn getRemainingMint(self: @TContractState, pool_mint: u8) -> u256;
     fn getMintMax(self: @TContractState, pool_mint: u8) -> u256;
     fn getTotalSupply(self: @TContractState, pool_mint: u8) -> u256;

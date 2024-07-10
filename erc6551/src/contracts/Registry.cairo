@@ -25,7 +25,7 @@ mod Registry {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, token_contract: ContractAddress, token_id: u256) {
+    fn constructor(ref self: ContractState) {
         self.registry.initializer();
     }
 }

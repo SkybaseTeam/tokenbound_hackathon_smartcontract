@@ -183,8 +183,8 @@ mod AccountCollection {
         fn get_mint_price(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn mint_nft(ref self: ContractState, pool_mint: u8) {
-            self._mint_nft(pool_mint);
+        fn mint_nft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
+            return self._mint_nft(contract_address, pool_mint);
         }
         fn mint_public(ref self: ContractState, total: u256, pool_mint: u8, to: ContractAddress) {
             self._mint_public(total, pool_mint, to);
@@ -232,8 +232,8 @@ mod AccountCollection {
         fn getMintPrice(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn mintNft(ref self: ContractState, pool_mint: u8) {
-            self._mint_nft(pool_mint);
+        fn mintNft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
+            return self._mint_nft(contract_address, pool_mint);
         }
         fn mintPublic(ref self: ContractState, total: u256, pool_mint: u8, to: ContractAddress) {
             self._mint_public(total, pool_mint, to);
@@ -323,8 +323,8 @@ mod AccountCollection {
             return self.price_pool.read(pool_mint);
         }
 
-        fn _mint_nft(ref self: ContractState, pool_mint: u8) {
-            let caller = get_caller_address();
+        fn _mint_nft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
+            let caller = contract_address;
     
             // Verify time
             assert(get_block_timestamp() >= self.time_pool.read(pool_mint), Errors::TIME_NOT_START_YET);
@@ -366,6 +366,8 @@ mod AccountCollection {
     
             // Emit event
             self.emit(NFTMinted { from: Zeroable::zero(), to: caller, token_id, pool: pool_mint });
+
+            return token_id;
         }
 
         fn _mint_public(ref self: ContractState, total: u256, pool_mint: u8, to: ContractAddress) {
