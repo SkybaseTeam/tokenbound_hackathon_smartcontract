@@ -48,12 +48,12 @@ mod HeroToken {
         // Verify signature
         assert(
             check_ecdsa_signature(message_hash, PUBLIC_KEY_SIGN, signature_r, signature_s),
-            'Error: msg hash not match'
+            'Error: signature not match'
         );
 
         // Verify message hash
         assert(
-            message_hash == check_msg(contract_address, caller, amount),
+            message_hash == check_msg(contract_address, caller),
             'Error: msg hash not match'
         );
 
@@ -70,12 +70,10 @@ mod HeroToken {
         self.erc20.initializer(name, symbol);
     }
 
-    fn check_msg(account: ContractAddress, to: ContractAddress, amount: u256) -> felt252 {
+    fn check_msg(account: ContractAddress, to: ContractAddress) -> felt252 {
         let mut message: Array<felt252> = ArrayTrait::new();
         message.append(account.into());
         message.append(to.into());
-        message.append(amount.low.into());
-        message.append(amount.high.into());
         poseidon::poseidon_hash_span(message.span())
     }
 }
