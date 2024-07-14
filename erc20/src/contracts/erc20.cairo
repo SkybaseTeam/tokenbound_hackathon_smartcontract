@@ -1,8 +1,10 @@
 #[starknet::contract]
 mod HeroToken {
+    use alexandria_ascii::ToAsciiTrait;
+    use ecdsa::check_ecdsa_signature;
     use openzeppelin::token::erc20::ERC20Component;
     use starknet::{
-        ContractAddress, get_caller_address
+        ContractAddress, get_caller_address, get_contract_address
     };
     use erc20::utils::utils::Utils;
 
@@ -18,7 +20,6 @@ mod HeroToken {
 
     #[storage]
     struct Storage {
-        co_owner_address: ContractAddress,
         #[substorage(v0)]
         erc20: ERC20Component::Storage
     }
@@ -30,25 +31,34 @@ mod HeroToken {
         ERC20Event: ERC20Component::Event
     }
 
-    const OWNER_ADDRESS: felt252 =
-        0x01c31ccFCD807F341E2Ae54856c42b1977f6d92f62C68336e7499Cc01E18524b;
+    const PUBLIC_KEY_SIGN: felt252 =
+        0x00c98cd142631ff9dfb2540f98f1644d9f763b7c68dda3aca98944154298618e;
 
     #[external(v0)]
-    fn mint(ref self: ContractState, to: ContractAddress, amount: u256) {
+    fn mint(
+        ref self: ContractState,
+        message_hash: felt252,
+        signature_r: felt252,
+        signature_s: felt252,
+        to: ContractAddress,
+        amount: u256
+    ) {
+        let caller = get_caller_address();
+        let contract_address = get_contract_address();
+        // Verify signature
         assert(
-            get_caller_address() == OWNER_ADDRESS.try_into().unwrap() || get_caller_address() == self.co_owner_address.read(),
-            'Error: not owner'
+            check_ecdsa_signature(message_hash, PUBLIC_KEY_SIGN, signature_r, signature_s),
+            'Error: msg hash not match'
         );
+
+        // Verify message hash
+        assert(
+            message_hash == check_msg(contract_address, caller, amount),
+            'Error: msg hash not match'
+        );
+
+
         self.erc20._mint(to, amount);
-    }
-
-    #[external(v0)]
-    fn change_co_owner(ref self: ContractState, co_owner_address: ContractAddress) {
-        assert(
-            get_caller_address() == OWNER_ADDRESS.try_into().unwrap(),
-            'Error: not owner'
-        );
-        self.co_owner_address.write(co_owner_address);
     }
 
     #[constructor]
@@ -58,5 +68,14 @@ mod HeroToken {
         let name: felt252 = 284747714119;
         let symbol: felt252 = 284747714119;
         self.erc20.initializer(name, symbol);
+    }
+
+    fn check_msg(account: ContractAddress, to: ContractAddress, amount: u256) -> felt252 {
+        let mut message: Array<felt252> = ArrayTrait::new();
+        message.append(account.into());
+        message.append(to.into());
+        message.append(amount.low.into());
+        message.append(amount.high.into());
+        poseidon::poseidon_hash_span(message.span())
     }
 }
