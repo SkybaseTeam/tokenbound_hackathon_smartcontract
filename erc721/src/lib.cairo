@@ -4,11 +4,11 @@ mod components {
 }
 mod interfaces {
     mod erc721;
-    mod account_collection;
+    mod collection;
 }
 mod utils {
     mod utils;
 }
 mod contracts {
-    mod account_collection;
+    mod collection;
 }

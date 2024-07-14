@@ -3,23 +3,21 @@ mod AccountCollection {
     use alexandria_ascii::ToAsciiTrait;
     use erc721::utils::utils::Utils;
     use erc721::components::erc721::ERC721Component;
-    use erc721::interfaces::account_collection::{
-        IAccountCollection, IAccountCollectionCamel
+    use erc721::interfaces::collection::{
+        ICollection, ICollectionCamel
     };
     use core::Zeroable;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
     use starknet::{
-        get_caller_address, get_contract_address, get_block_timestamp, replace_class_syscall
+        get_caller_address, get_contract_address, get_block_timestamp, replace_class_syscall, call_contract_syscall
     };
     use starknet::{ContractAddress, ClassHash, SyscallResult, SyscallResultTrait};
 
     const ETH_CONTRACT_ADDRESS: felt252 =
-        0x002825f54382afee98d6cfe8f2daf9aae24089b4a724de92b0e4fda50a4551e9;
+        0x0511a1885b2a0f815e72bb368e840faea782c141c07a01af3c9f90c94fac09d1 ;
     const OWNER_ADDRESS: felt252 =
-        0x01c31ccFCD807F341E2Ae54856c42b1977f6d92f62C68336e7499Cc01E18524b;
-
-    const MINT_PRICE: u256 = 0;
+        0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -105,8 +103,8 @@ mod AccountCollection {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        let name: felt252 = 'MEMELAND4';
-        let symbol: felt252 = 'MELD4';
+        let name: felt252 = 'ERC6551 Tokenbound Account';
+        let symbol: felt252 = 'TBA';
 
         self.erc721.initializer(name, symbol);
 
@@ -118,16 +116,16 @@ mod AccountCollection {
         self.token_uri_5.write('metadata/');
 
         // Total supply
-        self.total_supply.write(400);
+        self.total_supply.write(4000);
 
         // Supply
-        self.supply_pool.write(1, 100); // Public  
-        self.supply_pool.write(2, 100); // Private
-        self.supply_pool.write(3, 100); // Whitelist
-        self.supply_pool.write(4, 100); // Holder
+        self.supply_pool.write(1, 1000); // Public  
+        self.supply_pool.write(2, 1000); // Private
+        self.supply_pool.write(3, 1000); // Whitelist
+        self.supply_pool.write(4, 1000); // Holder
 
         // Price 
-        self.price_pool.write(1, MINT_PRICE * Utils::pow(10, 17));
+        self.price_pool.write(1, 0);
         self.price_pool.write(2, 0);
         self.price_pool.write(3, 0);
         self.price_pool.write(4, 0);
@@ -135,7 +133,7 @@ mod AccountCollection {
         // Time
         self.time_pool.write(1, 1715698800);
         self.time_pool.write(2, 0);
-        self.time_pool.write(3, 1715695200);
+        self.time_pool.write(3, 0);
         self.time_pool.write(4, 0);
 
         // Max mint
@@ -152,7 +150,7 @@ mod AccountCollection {
     }
 
     #[abi(embed_v0)]
-    impl IAccountCollectionImpl of IAccountCollection<ContractState> {
+    impl ICollectionImpl of ICollection<ContractState> {
         fn get_sum_pool(self: @ContractState) -> Array<u256> {
             return self._get_sum_pool();
         }
@@ -183,8 +181,8 @@ mod AccountCollection {
         fn get_mint_price(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn mint_nft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
-            return self._mint_nft(contract_address, pool_mint);
+        fn mint_nft(ref self: ContractState, registry_contract: ContractAddress, implementation_hash: felt252) -> u256 {
+            return self._mint_nft(registry_contract, implementation_hash);
         }
         fn mint_public(ref self: ContractState, total: u256, pool_mint: u8, to: ContractAddress) {
             self._mint_public(total, pool_mint, to);
@@ -201,7 +199,7 @@ mod AccountCollection {
     }
 
     #[abi(embed_v0)]
-    impl IAccountCollectionCamelImpl of IAccountCollectionCamel<ContractState> {
+    impl ICollectionCamelImpl of ICollectionCamel<ContractState> {
         fn getSumPool(self: @ContractState) -> Array<u256> {
             return self._get_sum_pool();
         }
@@ -232,8 +230,8 @@ mod AccountCollection {
         fn getMintPrice(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn mintNft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
-            return self._mint_nft(contract_address, pool_mint);
+        fn mintNft(ref self: ContractState, registry_contract: ContractAddress, implementation_hash: felt252) -> u256 {
+            return self._mint_nft(registry_contract, implementation_hash);
         }
         fn mintPublic(ref self: ContractState, total: u256, pool_mint: u8, to: ContractAddress) {
             self._mint_public(total, pool_mint, to);
@@ -323,8 +321,13 @@ mod AccountCollection {
             return self.price_pool.read(pool_mint);
         }
 
-        fn _mint_nft(ref self: ContractState, contract_address: ContractAddress, pool_mint: u8) -> u256 {
-            let caller = contract_address;
+        fn _mint_nft(
+            ref self: ContractState,
+            registry_contract: ContractAddress,
+            implementation_hash: felt252,
+        ) -> u256 {
+            let pool_mint: u8 = 1;
+            let caller = get_caller_address();
     
             // Verify time
             assert(get_block_timestamp() >= self.time_pool.read(pool_mint), Errors::TIME_NOT_START_YET);
@@ -346,15 +349,6 @@ mod AccountCollection {
                 Errors::MINTED_MAX_AMOUNT_POOL
             );
     
-            // Transfer token
-            // let this_contract_address = get_contract_address();
-            // let token_contract_address: ContractAddress = ETH_CONTRACT_ADDRESS.try_into().unwrap();
-            // let allowance = IERC20CamelDispatcher { contract_address: token_contract_address }
-            //     .allowance(caller, this_contract_address);
-            // assert(allowance >= self.price_pool.read(pool_mint), Errors::ALLOWANCE_NOT_ENOUGH);
-            // IERC20CamelDispatcher { contract_address: token_contract_address }
-            //     .transferFrom(caller, this_contract_address, self.price_pool.read(pool_mint));
-    
             // Save to storage
             token_id = token_id + 1;
             self.token_id.write(token_id);
@@ -363,6 +357,8 @@ mod AccountCollection {
     
             // Mint NFT & set the token's URI
             self.erc721._mint(caller, token_id);
+
+            self._mint_tba(registry_contract, implementation_hash, get_contract_address(), token_id);
     
             // Emit event
             self.emit(NFTMinted { from: Zeroable::zero(), to: caller, token_id, pool: pool_mint });
@@ -450,6 +446,26 @@ mod AccountCollection {
             // Emit event
             self.emit(Upgraded { class_hash: new_class_hash });
         }
-    
+
+        fn _mint_tba(
+            self: @ContractState,
+            registy_contract: ContractAddress,
+            implementation_hash: felt252,
+            contract_address: ContractAddress,
+            token_id: u256
+        ) {
+            let mut calldata: Array<felt252> = ArrayTrait::new();
+            Serde::serialize(@implementation_hash, ref calldata);
+            Serde::serialize(@contract_address, ref calldata);
+            Serde::serialize(@token_id, ref calldata);
+            let mut res = call_contract_syscall(
+                registy_contract, selector!("create_account"), calldata.span()
+            );
+            if (res.is_err()) {
+                res = call_contract_syscall(
+                    registy_contract, selector!("createAccount"), calldata.span()
+                );
+            }
+        }
     }
 }
