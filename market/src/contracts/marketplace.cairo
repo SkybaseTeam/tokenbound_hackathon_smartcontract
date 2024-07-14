@@ -68,7 +68,7 @@ mod Marketplace {
     #[abi(embed_v0)]
     impl MarketplaceImpl of IMarketplace<ContractState> {
 
-        fn get_price(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+        fn get_price(self: @ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
             return self._get_price(token_address, token_id);
         }
 
@@ -87,7 +87,7 @@ mod Marketplace {
 
     #[abi(embed_v0)]
     impl MarketplaceCamelImpl of IMarketplaceCamel<ContractState> {
-        fn getPrice(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+        fn getPrice(self: @ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
             return self._get_price(token_address, token_id);
         }
 
@@ -107,7 +107,8 @@ mod Marketplace {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
 
-        fn _get_price(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+        fn _get_price(self: @ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+            assert(self.price.read((token_address, token_id)) > 0, Errors::NFT_NOT_ON_SALE);
             return self.price.read((token_address, token_id));
         }
 
