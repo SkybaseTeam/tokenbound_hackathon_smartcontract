@@ -49,7 +49,7 @@ mod Marketplace {
     }
 
     const ETH_CONTRACT_ADDRESS: felt252 =
-        0x002825f54382afee98d6cfe8f2daf9aae24089b4a724de92b0e4fda50a4551e;
+        0x0511a1885b2a0f815e72bb368e840faea782c141c07a01af3c9f90c94fac09d1 ;
 
     mod Errors {
         const NOT_OWNER: felt252 = 'Error: not owner';
@@ -67,6 +67,11 @@ mod Marketplace {
 
     #[abi(embed_v0)]
     impl MarketplaceImpl of IMarketplace<ContractState> {
+
+        fn get_price(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+            return self._get_price(token_address, token_id);
+        }
+
         fn buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
             self._buy_nft(token_address, token_id);
         }
@@ -82,6 +87,10 @@ mod Marketplace {
 
     #[abi(embed_v0)]
     impl MarketplaceCamelImpl of IMarketplaceCamel<ContractState> {
+        fn getPrice(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+            return self._get_price(token_address, token_id);
+        }
+
         fn buyNft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
             self._buy_nft(token_address, token_id);
         }
@@ -97,6 +106,11 @@ mod Marketplace {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
+
+        fn _get_price(ref self: ContractState, token_address: ContractAddress, token_id: u256) -> u256 {
+            return self.price.read((token_address, token_id));
+        }
+
         fn _buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
             assert(self.price.read((token_address, token_id)) > 0, Errors::NFT_NOT_ON_SALE);
             assert(self.owner.read((token_address, token_id)) != get_caller_address(), Errors::BUY_SELF_NFT);
