@@ -11,9 +11,6 @@ mod RegistryComponent {
         IRegistry, IRegistryCamel
     };
 
-    const NFT_CONTRACT_ADDRESS: felt252 =
-    0x04e807d6fb42aff9968db63ca4b1e4a71c2589e265482f2ee020c8a3b2e47222;
-
     #[storage]
     struct Storage {
         registry_deployed_accounts: LegacyMap<
@@ -41,6 +38,7 @@ mod RegistryComponent {
 
     mod Errors {
         const CALLER_IS_NOT_OWNER: felt252 = 'Registry: caller is not onwer';
+        const ACCOUNT_DEPLOYED: felt252 = 'Registry: account deployed';
     }
 
     #[embeddable_as(RegistryImpl)]
@@ -52,19 +50,18 @@ mod RegistryComponent {
             ref self: ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
-            return self._create_account(implementation_hash, token_contract, salt);
+            return self._create_account(implementation_hash, token_contract, token_id);
         }
 
         fn get_account(
             self: @ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            token_id: u256,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
-            return self._get_account(implementation_hash, token_contract, token_id, salt);
+            return self._get_account(implementation_hash, token_contract, token_id);
         }
 
         fn total_deployed_accounts(
@@ -83,19 +80,18 @@ mod RegistryComponent {
             ref self: ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
-            return self._create_account(implementation_hash, token_contract, salt);
+            return self._create_account(implementation_hash, token_contract, token_id);
         }
 
         fn getAccount(
             self: @ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            token_id: u256,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
-            return self._get_account(implementation_hash, token_contract, token_id, salt);
+            return self._get_account(implementation_hash, token_contract, token_id);
         }
 
         fn totalDeployedAccounts(
@@ -122,16 +118,19 @@ mod RegistryComponent {
             ref self: ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
-            let token_id = self._mint_nft(
-                NFT_CONTRACT_ADDRESS.try_into().unwrap(),
-                get_caller_address()
-            );
-
+            assert(self.registry_deployed_accounts.read((token_contract, token_id)) == 0_u8, Errors::ACCOUNT_DEPLOYED);
             let mut constructor_calldata: Array<felt252> = array![
                 token_contract.into(), token_id.low.into(), token_id.high.into()
             ];
+
+            let salt = PedersenTrait::new(0)
+                .update(token_contract.into())
+                .update(token_id.low.into())
+                .update(token_id.high.into())
+                .update(3)
+                .finalize();
 
             let class_hash: ClassHash = implementation_hash.try_into().unwrap();
             let result = deploy_syscall(class_hash, salt, constructor_calldata.span(), true);
@@ -157,9 +156,16 @@ mod RegistryComponent {
             self: @ComponentState<TContractState>,
             implementation_hash: felt252,
             token_contract: ContractAddress,
-            token_id: u256,
-            salt: felt252
+            token_id: u256
         ) -> ContractAddress {
+
+            let salt = PedersenTrait::new(0)
+                .update(token_contract.into())
+                .update(token_id.low.into())
+                .update(token_id.high.into())
+                .update(3)
+                .finalize();
+
             let constructor_calldata_hash = PedersenTrait::new(0)
                 .update(token_contract.into())
                 .update(token_id.low.into())
@@ -206,23 +212,6 @@ mod RegistryComponent {
             }
             let mut address = res.unwrap();
             Serde::<ContractAddress>::deserialize(ref address).unwrap()
-        }
-
-        fn _mint_nft(
-            self: @ComponentState<TContractState>, contract_address: ContractAddress, recipient: ContractAddress
-        ) -> u256 {
-            let mint_pool = 1;
-            let mut calldata: Array<felt252> = ArrayTrait::new();
-            Serde::serialize(@recipient, ref calldata);
-            Serde::serialize(@mint_pool, ref calldata);
-            let mut res = call_contract_syscall(
-                contract_address, selector!("mint_nft"), calldata.span()
-            );
-            if (res.is_err()) {
-                res = call_contract_syscall(contract_address, selector!("mintNft"), calldata.span());
-            }
-            let mut token_id = res.unwrap();
-            Serde::<u256>::deserialize(ref token_id).unwrap()
         }
     }
 }

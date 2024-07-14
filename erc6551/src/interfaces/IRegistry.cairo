@@ -6,14 +6,13 @@ trait IRegistry<TContractState> {
         ref self: TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        salt: felt252
+        token_id: u256
     ) -> ContractAddress;
     fn get_account(
         self: @TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        token_id: u256,
-        salt: felt252
+        token_id: u256
     ) -> ContractAddress;
     fn total_deployed_accounts(
         self: @TContractState, token_contract: ContractAddress, token_id: u256
@@ -26,14 +25,13 @@ trait IRegistryCamel<TContractState> {
         ref self: TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        salt: felt252
+        token_id: u256
     ) -> ContractAddress;
     fn getAccount(
         self: @TContractState,
         implementation_hash: felt252,
         token_contract: ContractAddress,
-        token_id: u256,
-        salt: felt252
+        token_id: u256
     ) -> ContractAddress;
     fn totalDeployedAccounts(
         self: @TContractState, token_contract: ContractAddress, token_id: u256
