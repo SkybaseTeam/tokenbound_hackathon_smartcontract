@@ -1,7 +1,6 @@
 #[starknet::contract]
-mod AccountCollection {
+mod Collection {
     use alexandria_ascii::ToAsciiTrait;
-    use erc721::utils::utils::Utils;
     use erc721::components::erc721::ERC721Component;
     use erc721::interfaces::collection::{
         ICollection, ICollectionCamel
