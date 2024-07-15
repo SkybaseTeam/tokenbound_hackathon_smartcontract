@@ -24,7 +24,7 @@ mod Token {
     struct Storage {
         mint_point: u256,
         message_hash_storage: LegacyMap<felt252, bool>,
-        minted_time: LegacyMap<ContractAddress, u256>,
+        minted_time: LegacyMap<ContractAddress, u128>,
         #[substorage(v0)]
         erc20: ERC20Component::Storage
     }
@@ -53,7 +53,7 @@ mod Token {
 
     #[abi(embed_v0)]
     impl TokenImpl of Token<ContractState> {
-        fn get_minted(self: @ContractState, account_contract: ContractAddress) -> u256 {
+        fn get_minted(self: @ContractState, account_contract: ContractAddress) -> u128 {
             return self._get_minted(account_contract);
         }
         fn mint(ref self: ContractState, message_hash: felt252, signature_r: felt252, signature_s: felt252) {
@@ -66,7 +66,7 @@ mod Token {
 
     #[abi(embed_v0)]
     impl TokenCamelImpl of TokenCamel<ContractState> {
-        fn getMinted(self: @ContractState, account_contract: ContractAddress) -> u256 {
+        fn getMinted(self: @ContractState, account_contract: ContractAddress) -> u128 {
             return self._get_minted(account_contract);
         }
         fn changeMintPoint(ref self: ContractState, new_achievement_point: u256) {
@@ -80,7 +80,7 @@ mod Token {
         fn _get_minted(
             self: @ContractState,
             account_contract: ContractAddress
-        ) -> u256 {
+        ) -> u128 {
             return self.minted_time.read(account_contract);
         }
 
@@ -128,12 +128,11 @@ mod Token {
         }
     }
 
-    fn check_msg(account: ContractAddress, to: ContractAddress, index: u256) -> felt252 {
+    fn check_msg(account: ContractAddress, to: ContractAddress, index: u128) -> felt252 {
         let mut message: Array<felt252> = ArrayTrait::new();
         message.append(account.into());
         message.append(to.into());
-        message.append(index.low.into());
-        message.append(index.high.into());
+        message.append(index.into());
         poseidon::poseidon_hash_span(message.span())
     }
 }
