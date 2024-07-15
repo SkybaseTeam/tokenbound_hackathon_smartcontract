@@ -10,14 +10,14 @@ trait ICollection<TContractState> {
     fn up_supply(ref self: TContractState, pool: u8, supply: u256);
     fn up_mint_max(ref self: TContractState, pool: u8, supply: u256);
     fn up_price(ref self: TContractState, pool: u8, price: u256);
-    fn mint_nft(ref self: TContractState) -> u256;
+    fn mint_nft(ref self: TContractState, token_address: ContractAddress) -> u256;
     fn get_remaining_mint(self: @TContractState, pool_mint: u8) -> u256;
     fn get_mint_max(self: @TContractState, pool_mint: u8) -> u256;
     fn get_total_supply(self: @TContractState, pool_mint: u8) -> u256;
     fn get_mint_price(self: @TContractState, pool_mint: u8) -> u256;
     fn get_token_metadata(self: @TContractState, token_id: u256) -> (u8, u8);
     fn burn(ref self: TContractState, token_id: u256);
-    fn claim(ref self: TContractState);
+    fn claim(ref self: TContractState, token_address: ContractAddress);
     fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
@@ -29,7 +29,7 @@ trait ICollectionCamel<TContractState> {
     fn upSupply(ref self: TContractState, pool: u8, supply: u256);
     fn upMintMax(ref self: TContractState, pool: u8, supply: u256);
     fn upPrice(ref self: TContractState, pool: u8, price: u256);
-    fn mintNft(ref self: TContractState) -> u256;
+    fn mintNft(ref self: TContractState, token_address: ContractAddress) -> u256;
     fn getRemainingMint(self: @TContractState, pool_mint: u8) -> u256;
     fn getMintMax(self: @TContractState, pool_mint: u8) -> u256;
     fn getTotalSupply(self: @TContractState, pool_mint: u8) -> u256;

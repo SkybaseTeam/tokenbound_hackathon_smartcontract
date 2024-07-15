@@ -15,8 +15,6 @@ mod Collection {
     };
     use starknet::{ContractAddress, ClassHash, SyscallResult, SyscallResultTrait};
 
-    const ETH_CONTRACT_ADDRESS: felt252 =
-        0x0511a1885b2a0f815e72bb368e840faea782c141c07a01af3c9f90c94fac09d1 ;
     const OWNER_ADDRESS: felt252 =
         0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66;
 
@@ -188,14 +186,14 @@ mod Collection {
         fn get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8) {
             return self._get_token_metadata(token_id);
         }
-        fn mint_nft(ref self: ContractState) -> u256 {
-            return self._mint_nft();
+        fn mint_nft(ref self: ContractState, token_address: ContractAddress) -> u256 {
+            return self._mint_nft(token_address);
         }
         fn burn(ref self: ContractState, token_id: u256) {
             self._burn(token_id);
         }
-        fn claim(ref self: ContractState) {
-            self._claim();
+        fn claim(ref self: ContractState, token_address: ContractAddress) {
+            self._claim(token_address);
         }
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self._upgrade(new_class_hash);
@@ -237,8 +235,8 @@ mod Collection {
         fn getTokenMetadata(self: @ContractState, token_id: u256) -> (u8, u8) {
             return self._get_token_metadata(token_id);
         }
-        fn mintNft(ref self: ContractState) -> u256 {
-            return self._mint_nft();
+        fn mintNft(ref self: ContractState, token_address: ContractAddress) -> u256 {
+            return self._mint_nft(token_address);
         }
     }
 
@@ -329,7 +327,7 @@ mod Collection {
             return self.token_metadata.read(token_id);
         }
 
-        fn _mint_nft(ref self: ContractState) -> u256 {
+        fn _mint_nft(ref self: ContractState, token_address: ContractAddress) -> u256 {
             let pool_mint: u8 = 1;
             let caller = get_caller_address();
     
@@ -363,11 +361,10 @@ mod Collection {
 
             // Transfer token
             let this_contract_address = get_contract_address();
-            let token_contract_address: ContractAddress = ETH_CONTRACT_ADDRESS.try_into().unwrap();
-            let allowance = IERC20CamelDispatcher { contract_address: token_contract_address }
+            let allowance = IERC20CamelDispatcher { contract_address: token_address }
                 .allowance(caller, this_contract_address);
             assert(allowance >= self.price_pool.read(pool_mint), Errors::ALLOWANCE_NOT_ENOUGH);
-            IERC20CamelDispatcher { contract_address: token_contract_address }
+            IERC20CamelDispatcher { contract_address: token_address }
                 .transferFrom(caller, this_contract_address, self.price_pool.read(pool_mint));
     
             // Save to storage
@@ -413,18 +410,17 @@ mod Collection {
             self.emit(NFTBurned { from: caller, to: Zeroable::zero(), token_id });
         }
 
-        fn _claim(ref self: ContractState) {
+        fn _claim(ref self: ContractState, token_address: ContractAddress) {
             // Check owner
             let caller = get_caller_address();
             let owner_address: ContractAddress = OWNER_ADDRESS.try_into().unwrap();
             assert(caller == owner_address, Errors::NOT_OWNER);
     
             // Transfer token
-            let token_contract_address: ContractAddress = ETH_CONTRACT_ADDRESS.try_into().unwrap();
-            IERC20CamelDispatcher { contract_address: token_contract_address }
+            IERC20CamelDispatcher { contract_address: token_address }
                 .transfer(
                     owner_address,
-                    IERC20CamelDispatcher { contract_address: token_contract_address }
+                    IERC20CamelDispatcher { contract_address: token_address }
                         .balanceOf(get_contract_address())
                 );
         }

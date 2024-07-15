@@ -20,7 +20,7 @@ const SignMint = async (contract, account, achievement_index) => {
     return [msgHash, signature.r, signature.s];
 }
 SignMint(
-  "0x060efe1b9e278850bc72074652795fdc32f6904de3d99762562b0aabf94e2c32",
-  "0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66",
+  "0x04b4c8ad42e323d638eb6ab1aef32fd0b7a27243e2139aef8cebbbbc50ce38df",
+  "0x014dc7d7b6d2ea2a3c0173bb0450e52fe09fa349346862434d98fbb108f07e83",
   1
 )
