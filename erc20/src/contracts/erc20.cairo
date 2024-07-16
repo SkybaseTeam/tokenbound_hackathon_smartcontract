@@ -4,14 +4,24 @@ mod Token {
     use ecdsa::check_ecdsa_signature;
     use openzeppelin::token::erc20::ERC20Component;
     use starknet::{
-        ContractAddress, get_caller_address, get_contract_address
+        ContractAddress,
+        ClassHash,
+        get_caller_address,
+        get_contract_address
     };
-    use erc20::interfaces::erc20::{
-        Token, TokenCamel
+    use erc20::interfaces::{
+        IToken::IToken,
+        IToken::ITokenCamel,
+        IUpgradeable::IUpgradeable
+    };
+    use erc20::components::upgradeable::{
+        UpgradeableComponent
     };
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
+    // erc20
     #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     #[abi(embed_v0)]
@@ -20,20 +30,27 @@ mod Token {
     impl ERC20MetadataImpl = ERC20Component::ERC20MetadataImpl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
 
+    // upgradeable
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         mint_point: u256,
         message_hash_storage: LegacyMap<felt252, bool>,
         minted_time: LegacyMap<ContractAddress, u128>,
         #[substorage(v0)]
-        erc20: ERC20Component::Storage
+        erc20: ERC20Component::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        ERC20Event: ERC20Component::Event
+        ERC20Event: ERC20Component::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event
     }
 
     const PUBLIC_KEY_SIGN: felt252 =
@@ -52,7 +69,7 @@ mod Token {
     }
 
     #[abi(embed_v0)]
-    impl TokenImpl of Token<ContractState> {
+    impl TokenImpl of IToken<ContractState> {
         fn get_minted(self: @ContractState, account_contract: ContractAddress) -> u128 {
             return self._get_minted(account_contract);
         }
@@ -65,12 +82,21 @@ mod Token {
     }
 
     #[abi(embed_v0)]
-    impl TokenCamelImpl of TokenCamel<ContractState> {
+    impl TokenCamelImpl of ITokenCamel<ContractState> {
         fn getMinted(self: @ContractState, account_contract: ContractAddress) -> u128 {
             return self._get_minted(account_contract);
         }
         fn changeMintPoint(ref self: ContractState, new_achievement_point: u256) {
             self._change_mint_point(new_achievement_point);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(caller == OWNER_ADDRESS.try_into().unwrap(), 'Error: UNAUTHORIZED');
+            self.upgradeable._upgrade(new_class_hash);
         }
     }
 

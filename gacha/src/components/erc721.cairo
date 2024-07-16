@@ -17,7 +17,7 @@ mod ERC721Component {
     use openzeppelin::token::erc721::dual721_receiver::{
         DualCaseERC721Receiver, DualCaseERC721ReceiverTrait
     };
-    use gacha::interfaces::erc721::{
+    use gacha::interfaces::IErc721::{
         IERC721,
         IERC721Metadata,
         IERC721CamelOnly,

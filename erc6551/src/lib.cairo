@@ -4,15 +4,15 @@ mod interfaces {
     mod IUpgradeable;
 }
 mod components {
-    mod Account;
-    mod Registry;
-    mod Upgradeable;
+    mod account;
+    mod registry;
+    mod upgradeable;
 
-    use Account::AccountComponent;
-    use Registry::RegistryComponent;
-    use Upgradeable::UpgradeableComponent;
+    use account::AccountComponent;
+    use registry::RegistryComponent;
+    use upgradeable::UpgradeableComponent;
 }
 mod contracts {
-    mod Account;
-    mod Registry;
+    mod account;
+    mod registry;
 }

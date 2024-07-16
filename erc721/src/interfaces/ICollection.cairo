@@ -17,8 +17,7 @@ trait ICollection<TContractState> {
     fn get_mint_price(self: @TContractState, pool_mint: u8) -> u256;
     fn mint_public(ref self: TContractState, total: u256, pool_mint: u8, to: ContractAddress);
     fn burn(ref self: TContractState, token_id: u256);
-    fn claim(ref self: TContractState);
-    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
+    fn claim(ref self: TContractState, eth_address: ContractAddress);
 }
 
 #[starknet::interface]

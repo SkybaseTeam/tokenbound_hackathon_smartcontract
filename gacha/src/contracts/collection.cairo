@@ -1,9 +1,13 @@
 #[starknet::contract]
 mod Collection {
     use alexandria_ascii::ToAsciiTrait;
-    use gacha::components::erc721::ERC721Component;
-    use gacha::interfaces::collection::{
-        ICollection, ICollectionCamel
+    use gacha::components::{
+        ERC721Component, UpgradeableComponent
+    };
+    use gacha::interfaces::{
+        ICollection::ICollection,
+        ICollection::ICollectionCamel,
+        IUpgradeable::IUpgradeable
     };
     use core::{
         Zeroable, poseidon
@@ -20,6 +24,7 @@ mod Collection {
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     // ERC721
     #[abi(embed_v0)]
@@ -33,6 +38,9 @@ mod Collection {
     // SRC5
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+
+    // upgradeable
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -55,7 +63,9 @@ mod Collection {
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
-        src5: SRC5Component::Storage
+        src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage
     }
 
     #[derive(Drop, starknet::Event)]
@@ -73,21 +83,17 @@ mod Collection {
         token_id: u256
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct Upgraded {
-        class_hash: ClassHash
-    }
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         NFTMinted: NFTMinted,
         NFTBurned: NFTBurned,
-        Upgraded: Upgraded,
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event
     }
 
     mod Errors {
@@ -186,17 +192,14 @@ mod Collection {
         fn get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8) {
             return self._get_token_metadata(token_id);
         }
-        fn mint_nft(ref self: ContractState, token_address: ContractAddress) -> u256 {
-            return self._mint_nft(token_address);
+        fn mint_nft(ref self: ContractState, eth_address: ContractAddress) -> u256 {
+            return self._mint_nft(eth_address);
         }
         fn burn(ref self: ContractState, token_id: u256) {
             self._burn(token_id);
         }
-        fn claim(ref self: ContractState, token_address: ContractAddress) {
-            self._claim(token_address);
-        }
-        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self._upgrade(new_class_hash);
+        fn claim(ref self: ContractState, eth_address: ContractAddress) {
+            self._claim(eth_address);
         }
     }
 
@@ -235,8 +238,17 @@ mod Collection {
         fn getTokenMetadata(self: @ContractState, token_id: u256) -> (u8, u8) {
             return self._get_token_metadata(token_id);
         }
-        fn mintNft(ref self: ContractState, token_address: ContractAddress) -> u256 {
-            return self._mint_nft(token_address);
+        fn mintNft(ref self: ContractState, eth_address: ContractAddress) -> u256 {
+            return self._mint_nft(eth_address);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(caller == OWNER_ADDRESS.try_into().unwrap(), 'Error: UNAUTHORIZED');
+            self.upgradeable._upgrade(new_class_hash);
         }
     }
 
@@ -327,7 +339,7 @@ mod Collection {
             return self.token_metadata.read(token_id);
         }
 
-        fn _mint_nft(ref self: ContractState, token_address: ContractAddress) -> u256 {
+        fn _mint_nft(ref self: ContractState, eth_address: ContractAddress) -> u256 {
             let pool_mint: u8 = 1;
             let caller = get_caller_address();
     
@@ -361,10 +373,10 @@ mod Collection {
 
             // Transfer token
             let this_contract_address = get_contract_address();
-            let allowance = IERC20CamelDispatcher { contract_address: token_address }
+            let allowance = IERC20CamelDispatcher { contract_address: eth_address }
                 .allowance(caller, this_contract_address);
             assert(allowance >= self.price_pool.read(pool_mint), Errors::ALLOWANCE_NOT_ENOUGH);
-            IERC20CamelDispatcher { contract_address: token_address }
+            IERC20CamelDispatcher { contract_address: eth_address }
                 .transferFrom(caller, this_contract_address, self.price_pool.read(pool_mint));
     
             // Save to storage
@@ -410,36 +422,19 @@ mod Collection {
             self.emit(NFTBurned { from: caller, to: Zeroable::zero(), token_id });
         }
 
-        fn _claim(ref self: ContractState, token_address: ContractAddress) {
+        fn _claim(ref self: ContractState, eth_address: ContractAddress) {
             // Check owner
             let caller = get_caller_address();
             let owner_address: ContractAddress = OWNER_ADDRESS.try_into().unwrap();
             assert(caller == owner_address, Errors::NOT_OWNER);
     
             // Transfer token
-            IERC20CamelDispatcher { contract_address: token_address }
+            IERC20CamelDispatcher { contract_address: eth_address }
                 .transfer(
                     owner_address,
-                    IERC20CamelDispatcher { contract_address: token_address }
+                    IERC20CamelDispatcher { contract_address: eth_address }
                         .balanceOf(get_contract_address())
                 );
-        }
-    
-
-        fn _upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            // Check owner
-            let caller = get_caller_address();
-            let owner_address: ContractAddress = OWNER_ADDRESS.try_into().unwrap();
-            assert(caller == owner_address, Errors::NOT_OWNER);
-    
-            // Check class hash
-            assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS_HASH);
-    
-            // Upgrade
-            replace_class_syscall(new_class_hash).unwrap_syscall();
-    
-            // Emit event
-            self.emit(Upgraded { class_hash: new_class_hash });
         }
     }
 }

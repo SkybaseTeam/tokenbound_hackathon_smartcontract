@@ -1,15 +1,32 @@
 #[starknet::contract]
 mod Marketplace {
     use starknet::{
-        ContractAddress, get_caller_address, get_contract_address
+        ContractAddress,
+        ClassHash,
+        get_caller_address,
+        get_contract_address
     };
     use market::interfaces::{
-        erc721::IERC721Dispatcher, erc721::IERC721DispatcherTrait,
-        erc20::IERC20Dispatcher, erc20::IERC20DispatcherTrait,
-        marketplace::IMarketplace, marketplace::IMarketplaceCamel,
+        IErc721::IERC721Dispatcher,
+        IErc721::IERC721DispatcherTrait,
+        IErc20::IERC20Dispatcher,
+        IErc20::IERC20DispatcherTrait,
+        IMarketplace::IMarketplace,
+        IMarketplace::IMarketplaceCamel,
+        IUpgradeable::IUpgradeable
     };
+    use market::components::{
+        UpgradeableComponent
+    };
+
+    const OWNER_ADDRESS: felt252 =
+        0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66;
+
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
     
-    
+    // upgradeable
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         // params: (token_address, token_id) -> owner_address
@@ -18,6 +35,8 @@ mod Marketplace {
         price: LegacyMap<(ContractAddress, u256), u256>,
         // params: (token_address, token_id) -> is_on_sale
         listing: LegacyMap<(ContractAddress, u256), bool>,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage
     }
 
     #[derive(Drop, starknet::Event)]
@@ -48,10 +67,9 @@ mod Marketplace {
         NFT_LISTED: NFT_LISTED,
         NFT_CANCELLED: NFT_CANCELLED,
         NFT_BOUGHT: NFT_BOUGHT,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event
     }
-
-    const ETH_CONTRACT_ADDRESS: felt252 =
-        0x0511a1885b2a0f815e72bb368e840faea782c141c07a01af3c9f90c94fac09d1 ;
 
     mod Errors {
         const NOT_OWNER: felt252 = 'Error: not owner';
@@ -78,8 +96,8 @@ mod Marketplace {
             return self._get_price(token_address, token_id);
         }
 
-        fn buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
-            self._buy_nft(token_address, token_id);
+        fn buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256, eth_address: ContractAddress) {
+            self._buy_nft(token_address, token_id, eth_address);
         }
 
         fn listing_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256, price: u256) {
@@ -101,8 +119,8 @@ mod Marketplace {
             return self._get_price(token_address, token_id);
         }
 
-        fn buyNft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
-            self._buy_nft(token_address, token_id);
+        fn buyNft(ref self: ContractState, token_address: ContractAddress, token_id: u256, eth_address: ContractAddress) {
+            self._buy_nft(token_address, token_id, eth_address);
         }
 
         fn listingNft(ref self: ContractState, token_address: ContractAddress, token_id: u256, price: u256) {
@@ -111,6 +129,15 @@ mod Marketplace {
 
         fn cancelNft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
             self._cancel_listing(token_address, token_id);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            let caller = get_caller_address();
+            assert(caller == OWNER_ADDRESS.try_into().unwrap(), 'Error: UNAUTHORIZED');
+            self.upgradeable._upgrade(new_class_hash);
         }
     }
 
@@ -126,16 +153,16 @@ mod Marketplace {
             return self.price.read((token_address, token_id));
         }
 
-        fn _buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
+        fn _buy_nft(ref self: ContractState, token_address: ContractAddress, token_id: u256, eth_address: ContractAddress) {
             assert(self.listing.read((token_address, token_id)) == true, Errors::NFT_NOT_ON_SALE);
             assert(self.owner.read((token_address, token_id)) != get_caller_address(), Errors::BUY_SELF_NFT);
             assert(
-                IERC20Dispatcher { contract_address: ETH_CONTRACT_ADDRESS.try_into().unwrap() }
+                IERC20Dispatcher { contract_address: eth_address }
                 .allowance(get_caller_address(), get_contract_address()) >= self.price.read((token_address, token_id)),
                 Errors::ALLOWANCE_NOT_ENOUGH
             );
 
-            IERC20Dispatcher { contract_address: ETH_CONTRACT_ADDRESS.try_into().unwrap() }
+            IERC20Dispatcher { contract_address: eth_address }
             .transferFrom(get_caller_address(), self.owner.read((token_address, token_id)), self.price.read((token_address, token_id)));
     
             IERC721Dispatcher { contract_address: token_address }

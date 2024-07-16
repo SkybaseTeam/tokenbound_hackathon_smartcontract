@@ -1,5 +1,9 @@
+mod components {
+    mod upgradeable;
+}
 mod interfaces {
-    mod erc20;
+    mod IToken;
+    mod IUpgradeable;
 }
 mod contracts {
     mod erc20;
