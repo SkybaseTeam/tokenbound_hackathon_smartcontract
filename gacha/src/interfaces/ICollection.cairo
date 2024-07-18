@@ -15,7 +15,7 @@ trait ICollection<TContractState> {
     fn get_mint_max(self: @TContractState, pool_mint: u8) -> u256;
     fn get_total_supply(self: @TContractState, pool_mint: u8) -> u256;
     fn get_mint_price(self: @TContractState, pool_mint: u8) -> u256;
-    fn get_token_metadata(self: @TContractState, token_id: u256) -> (u8, u8);
+    fn get_token_metadata(self: @TContractState, token_id: u256) -> (u8, u8, u8);
     fn burn(ref self: TContractState, token_id: u256);
     fn claim(ref self: TContractState, eth_address: ContractAddress);
 }
@@ -33,5 +33,5 @@ trait ICollectionCamel<TContractState> {
     fn getMintMax(self: @TContractState, pool_mint: u8) -> u256;
     fn getTotalSupply(self: @TContractState, pool_mint: u8) -> u256;
     fn getMintPrice(self: @TContractState, pool_mint: u8) -> u256;
-    fn getTokenMetadata(self: @TContractState, token_id: u256) -> (u8, u8);
+    fn getTokenMetadata(self: @TContractState, token_id: u256) -> (u8, u8, u8);
 }

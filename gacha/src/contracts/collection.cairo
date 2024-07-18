@@ -22,6 +22,13 @@ mod Collection {
     const OWNER_ADDRESS: felt252 =
         0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66;
 
+    const S_RANK_MAX_PITY: u8 = 80;
+    const A_RANK_MAX_PITY: u8 = 10;
+    const S_RANK_RATE_INCREASED_AT: u8 = 75;
+    const A_RANK_RATE_INCREASED_AT: u8 = 9;
+    const S_RANK_BASE_RATE: u8 = 1;
+    const A_RANK_BASE_RATE: u8 = 5;
+
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -59,7 +66,9 @@ mod Collection {
         price_pool: LegacyMap<u8, u256>,
         mint_max: LegacyMap<u8, u256>,
         user_minted: LegacyMap<(ContractAddress, u8), u256>,
-        token_metadata: LegacyMap<u256, (u8, u8)>,
+        token_metadata: LegacyMap<u256, (u8, u8, u8)>,
+        s_pity_counter: LegacyMap<ContractAddress, u8>,
+        a_pity_counter: LegacyMap<ContractAddress, u8>,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
@@ -70,9 +79,11 @@ mod Collection {
 
     #[derive(Drop, starknet::Event)]
     struct NFTMinted {
-        from: ContractAddress,
-        to: ContractAddress,
         token_id: u256,
+        token_type: u8,
+        token_rank: u8,
+        token_power: u8,
+        token_owner: ContractAddress,
         pool: u8
     }
 
@@ -117,17 +128,17 @@ mod Collection {
         self.erc721.initializer(name, symbol);
 
         // Token URI
-        self.token_uri_1.write('https://');
-        self.token_uri_2.write('grow-api.');
-        self.token_uri_3.write('memeland.com/');
-        self.token_uri_4.write('token/');
-        self.token_uri_5.write('metadata/');
+        self.token_uri_1.write('https://zenith.walkerlabs.io/');
+        self.token_uri_2.write('api/v1/');
+        self.token_uri_3.write('token/');
+        self.token_uri_4.write('0x5667a1a3318267C3774');
+        self.token_uri_5.write('092648F0cAB8CAb4955Dc/');
 
         // Total supply
-        self.total_supply.write(1000000000000000000000);
+        self.total_supply.write(1000000000000000000000000);
 
         // Supply
-        self.supply_pool.write(1, 1000000000000000000000); // Public  
+        self.supply_pool.write(1, 1000000000000000000000000); // Public  
         self.supply_pool.write(2, 0); // Private
         self.supply_pool.write(3, 0); // Whitelist
         self.supply_pool.write(4, 0); // Holder
@@ -189,7 +200,7 @@ mod Collection {
         fn get_mint_price(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8) {
+        fn get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8, u8) {
             return self._get_token_metadata(token_id);
         }
         fn mint_nft(ref self: ContractState, eth_address: ContractAddress) -> u256 {
@@ -235,7 +246,7 @@ mod Collection {
         fn getMintPrice(self: @ContractState, pool_mint: u8) -> u256 {
             return self._get_mint_price(pool_mint);
         }
-        fn getTokenMetadata(self: @ContractState, token_id: u256) -> (u8, u8) {
+        fn getTokenMetadata(self: @ContractState, token_id: u256) -> (u8, u8, u8) {
             return self._get_token_metadata(token_id);
         }
         fn mintNft(ref self: ContractState, eth_address: ContractAddress) -> u256 {
@@ -313,8 +324,7 @@ mod Collection {
                 self.token_uri_3.read(),
                 self.token_uri_4.read(),
                 self.token_uri_5.read(),
-                token_id_str,
-                '.json'
+                token_id_str
             ];
             token_uri.span()
         }
@@ -335,7 +345,7 @@ mod Collection {
             return self.price_pool.read(pool_mint);
         }
 
-        fn _get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8) {
+        fn _get_token_metadata(self: @ContractState, token_id: u256) -> (u8, u8, u8) {
             return self.token_metadata.read(token_id);
         }
 
@@ -388,22 +398,57 @@ mod Collection {
             self.erc721._mint(caller, token_id);
 
             // Calculate token metadata
-            let block_timestamp = get_block_timestamp().into();
-            let data_type: Array<felt252> = array!['_type_', block_timestamp];
-            let hash_type: u256 = poseidon::poseidon_hash_span(data_type.span()).into();
-            let mut token_type: u8 = (hash_type % 5).try_into().unwrap();
+            let s_pity_counter = self.s_pity_counter.read(caller) + 1;
+            let a_pity_counter = self.a_pity_counter.read(caller) + 1;
+            self.s_pity_counter.write(caller, s_pity_counter);
+            self.a_pity_counter.write(caller, a_pity_counter);
 
-            let mut rank = 0;
-            if(self.user_minted.read(acc_user_mint) % 30 == 0) {
-                rank = 2;
-            } else if(self.user_minted.read(acc_user_mint) % 10 == 0) {
-                rank = 1;
-            }
+            let s_rate_by_pity = rates(s_pity_counter, S_RANK_MAX_PITY, S_RANK_BASE_RATE, S_RANK_RATE_INCREASED_AT);
+            let a_rate_by_pity = rates(a_pity_counter, A_RANK_MAX_PITY, A_RANK_BASE_RATE, A_RANK_RATE_INCREASED_AT);
 
-            self.token_metadata.write(token_id, (token_type, rank));
+             // get random seed - block timestamp
+             let block_timestamp = get_block_timestamp().into();
+
+             // create random variable
+             let token_type_core: Array<felt252> = array!['_type_', block_timestamp];
+             let token_rank_core: Array<felt252> = array!['_rank_', block_timestamp];
+             let token_power_core: Array<felt252> = array!['_power_', block_timestamp];
+             let token_type_hash: u256 = poseidon::poseidon_hash_span(token_type_core.span()).into();
+             let token_rank_hash: u256 = poseidon::poseidon_hash_span(token_rank_core.span()).into();
+             let token_power_hash: u256 = poseidon::poseidon_hash_span(token_power_core.span()).into();
+ 
+             let token_type: u8 = (token_type_hash % 5).try_into().unwrap();
+             let token_rank_precentage = (token_rank_hash % 100).try_into().unwrap();
+ 
+             let mut token_rank: u8 = 0;
+             if (token_rank_precentage < s_rate_by_pity) {
+                 token_rank = 2_u8;
+                 self.s_pity_counter.write(caller, 0);
+             } else if (token_rank_precentage < a_rate_by_pity) {
+                 token_rank = 1_u8;
+                 self.a_pity_counter.write(caller, 0);
+             }
+ 
+             let mut token_power: u8 = 0;
+             if(token_rank == 2) {
+                 token_power = 50_u8 + (token_power_hash % (60 - 50)).try_into().unwrap();
+             } else if (token_rank == 1) {
+                 token_power = 30_u8 + (token_power_hash % (40 - 30)).try_into().unwrap();
+             } else {
+                 token_power = 10_u8 + (token_power_hash % (20 - 10)).try_into().unwrap();
+             }
+
+            self.token_metadata.write(token_id, (token_type, token_rank, token_power));
 
             // Emit event
-            self.emit(NFTMinted { from: Zeroable::zero(), to: caller, token_id, pool: pool_mint });
+            self.emit(NFTMinted {
+                token_id,
+                token_type,
+                token_rank,
+                token_power,
+                token_owner: caller,
+                pool: pool_mint
+            });
 
             return token_id;
         }
@@ -436,5 +481,19 @@ mod Collection {
                         .balanceOf(get_contract_address())
                 );
         }
+    }
+
+    fn rates(current_pity: u8, max_pity: u8, base_rate: u8, rate_increased_at: u8) -> u8 {
+        if (current_pity >= max_pity) {
+            return 100;
+        }
+        if (current_pity < rate_increased_at) {
+            return base_rate;
+        }
+        
+        let rate_increased_by = (100 - base_rate) / (max_pity + 1 - rate_increased_at);
+        let rate_before_current_pity = (current_pity + 1 - rate_increased_at) * rate_increased_by;
+        let increased_rate = base_rate + rate_before_current_pity;
+        return increased_rate;
     }
 }
