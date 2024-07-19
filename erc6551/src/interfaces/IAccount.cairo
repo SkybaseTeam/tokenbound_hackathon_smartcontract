@@ -33,3 +33,18 @@ trait IAccountCamel<TContractState> {
     fn isLocked(self: @TContractState) -> (bool, u64);
     fn supportsInterface(self: @TContractState, interface_id: felt252) -> bool;
 }
+
+#[starknet::interface]
+trait IAccountAction<TContractState> {
+    fn claim_token(ref self: TContractState, token_contract: ContractAddress, message_hash: felt252, signature_r: felt252, signature_s: felt252);
+    fn mint_nft(ref self: TContractState, nft_contract: ContractAddress, token_contract: ContractAddress) -> u256;
+    fn withdraw(ref self: TContractState, token_contract: ContractAddress);
+    fn equip_item(ref self: TContractState, token_address: ContractAddress, token_id: u256);
+}
+
+#[starknet::interface]
+trait IAccountActionCamel<TContractState> {
+    fn claimToken(ref self: TContractState, tokenContract: ContractAddress, messageHash: felt252, signatureR: felt252, signatureS: felt252);
+    fn mintNft(ref self: TContractState, nftContract: ContractAddress, tokenContract: ContractAddress) -> u256;
+    fn equipItem(ref self: TContractState, tokenAddress: ContractAddress, tokenId: u256);
+}
