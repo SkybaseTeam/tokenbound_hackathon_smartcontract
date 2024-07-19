@@ -15,7 +15,12 @@ mod Collection {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
     use starknet::{
-        get_caller_address, get_contract_address, get_block_timestamp, replace_class_syscall, call_contract_syscall
+        get_caller_address,
+        get_contract_address,
+        get_block_timestamp,
+        replace_class_syscall,
+        call_contract_syscall,
+        get_block_number
     };
     use starknet::{ContractAddress, ClassHash, SyscallResult, SyscallResultTrait};
 
@@ -128,11 +133,11 @@ mod Collection {
         self.erc721.initializer(name, symbol);
 
         // Token URI
-        self.token_uri_1.write('https://zenith.walkerlabs.io/');
-        self.token_uri_2.write('api/v1/');
-        self.token_uri_3.write('token/');
-        self.token_uri_4.write('0x5667a1a3318267C3774');
-        self.token_uri_5.write('092648F0cAB8CAb4955Dc/');
+        self.token_uri_1.write('https://');
+        self.token_uri_2.write('image-hackathon');
+        self.token_uri_3.write('.onrender.com');
+        self.token_uri_4.write('/');
+        self.token_uri_5.write('metadata/');
 
         // Total supply
         self.total_supply.write(1000000000000000000000000);
@@ -259,6 +264,13 @@ mod Collection {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             let caller = get_caller_address();
             assert(caller == OWNER_ADDRESS.try_into().unwrap(), 'Error: UNAUTHORIZED');
+
+            self.token_uri_1.write('https://');
+            self.token_uri_2.write('image-hackathon');
+            self.token_uri_3.write('.onrender.com');
+            self.token_uri_4.write('/');
+            self.token_uri_5.write('metadata/');
+
             self.upgradeable._upgrade(new_class_hash);
         }
     }
@@ -406,13 +418,28 @@ mod Collection {
             let s_rate_by_pity = rates(s_pity_counter, S_RANK_MAX_PITY, S_RANK_BASE_RATE, S_RANK_RATE_INCREASED_AT);
             let a_rate_by_pity = rates(a_pity_counter, A_RANK_MAX_PITY, A_RANK_BASE_RATE, A_RANK_RATE_INCREASED_AT);
 
-             // get random seed - block timestamp
-             let block_timestamp = get_block_timestamp().into();
-
              // create random variable
-             let token_type_core: Array<felt252> = array!['_type_', block_timestamp];
-             let token_rank_core: Array<felt252> = array!['_rank_', block_timestamp];
-             let token_power_core: Array<felt252> = array!['_power_', block_timestamp];
+             let token_type_core: Array<felt252> = array![
+                '_token_type_',
+                get_block_timestamp().into(),
+                get_block_number().into(),
+                self.user_minted.read(acc_user_mint).try_into().unwrap(),
+                caller.try_into().unwrap()
+            ];
+             let token_rank_core: Array<felt252> = array![
+                '_token_rank_',
+                get_block_timestamp().into(),
+                get_block_number().into(),
+                self.user_minted.read(acc_user_mint).try_into().unwrap(),
+                caller.try_into().unwrap()
+            ];
+             let token_power_core: Array<felt252> = array![
+                '_token_power_',
+                get_block_timestamp().into(),
+                get_block_number().into(),
+                self.user_minted.read(acc_user_mint).try_into().unwrap(),
+                caller.try_into().unwrap()
+            ];
              let token_type_hash: u256 = poseidon::poseidon_hash_span(token_type_core.span()).into();
              let token_rank_hash: u256 = poseidon::poseidon_hash_span(token_rank_core.span()).into();
              let token_power_hash: u256 = poseidon::poseidon_hash_span(token_power_core.span()).into();
