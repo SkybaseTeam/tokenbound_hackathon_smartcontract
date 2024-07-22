@@ -39,12 +39,14 @@ trait IAccountAction<TContractState> {
     fn claim_token(ref self: TContractState, token_contract: ContractAddress, message_hash: felt252, signature_r: felt252, signature_s: felt252);
     fn mint_nft(ref self: TContractState, nft_contract: ContractAddress, token_contract: ContractAddress) -> u256;
     fn withdraw(ref self: TContractState, token_contract: ContractAddress);
-    fn equip_item(ref self: TContractState, token_address: ContractAddress, token_id: u256);
+    fn equip_item(ref self: TContractState, contract_address: ContractAddress, token_id: u256) -> (u256, ContractAddress);
+    fn get_equipped_item(self: @TContractState, slot: u8) -> (u256, ContractAddress);
 }
 
 #[starknet::interface]
 trait IAccountActionCamel<TContractState> {
     fn claimToken(ref self: TContractState, tokenContract: ContractAddress, messageHash: felt252, signatureR: felt252, signatureS: felt252);
     fn mintNft(ref self: TContractState, nftContract: ContractAddress, tokenContract: ContractAddress) -> u256;
-    fn equipItem(ref self: TContractState, tokenAddress: ContractAddress, tokenId: u256);
+    fn equipItem(ref self: TContractState, contractAddress: ContractAddress, tokenId: u256) -> (u256, ContractAddress);
+    fn getEquippedItem(self: @TContractState, slot: u8) -> (u256, ContractAddress);
 }

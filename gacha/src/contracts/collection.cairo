@@ -1,3 +1,10 @@
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IAccountAction<TContractState> {
+    fn equip_item(ref self: TContractState, token_id: u256) -> (u256, ContractAddress);
+}
+
 #[starknet::contract]
 mod Collection {
     use alexandria_ascii::ToAsciiTrait;
@@ -5,7 +12,7 @@ mod Collection {
         ERC721Component, UpgradeableComponent
     };
     use gacha::interfaces::{
-        ICollection::ICollection,
+        ICollection::ICollection, ICollection::ICollectionDispatcher, ICollection::ICollectionDispatcherTrait,
         ICollection::ICollectionCamel,
         IUpgradeable::IUpgradeable
     };
@@ -23,6 +30,9 @@ mod Collection {
         get_block_number
     };
     use starknet::{ContractAddress, ClassHash, SyscallResult, SyscallResultTrait};
+    use super::{
+        IAccountActionDispatcher, IAccountActionDispatcherTrait
+    };
 
     const OWNER_ADDRESS: felt252 =
         0x05fE8F79516C123e8556eA96bF87a97E7b1eB5AbdBE4dbCD993f3FB9A6F24A66;
@@ -99,11 +109,18 @@ mod Collection {
         token_id: u256
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct NFTEquipped {
+        account: ContractAddress,
+        token_id: u256,
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         NFTMinted: NFTMinted,
         NFTBurned: NFTBurned,
+        NFTEquipped: NFTEquipped,
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
@@ -216,6 +233,9 @@ mod Collection {
         }
         fn claim(ref self: ContractState, eth_address: ContractAddress) {
             self._claim(eth_address);
+        }
+        fn equip(ref self: ContractState, token_id: u256) {
+            self._equip(token_id);
         }
     }
 
@@ -423,30 +443,39 @@ mod Collection {
                 '_token_type_',
                 get_block_timestamp().into(),
                 get_block_number().into(),
-                self.user_minted.read(acc_user_mint).try_into().unwrap(),
-                caller.try_into().unwrap()
+                self.user_minted.read(acc_user_mint).try_into().unwrap()
             ];
              let token_rank_core: Array<felt252> = array![
                 '_token_rank_',
                 get_block_timestamp().into(),
                 get_block_number().into(),
-                self.user_minted.read(acc_user_mint).try_into().unwrap(),
-                caller.try_into().unwrap()
+                self.user_minted.read(acc_user_mint).try_into().unwrap()
             ];
              let token_power_core: Array<felt252> = array![
                 '_token_power_',
                 get_block_timestamp().into(),
                 get_block_number().into(),
-                self.user_minted.read(acc_user_mint).try_into().unwrap(),
-                caller.try_into().unwrap()
+                self.user_minted.read(acc_user_mint).try_into().unwrap()
             ];
              let token_type_hash: u256 = poseidon::poseidon_hash_span(token_type_core.span()).into();
              let token_rank_hash: u256 = poseidon::poseidon_hash_span(token_rank_core.span()).into();
              let token_power_hash: u256 = poseidon::poseidon_hash_span(token_power_core.span()).into();
  
-             let token_type: u8 = (token_type_hash % 5).try_into().unwrap();
+             let token_type_precentage = (token_type_hash % 600).try_into().unwrap();
+             let mut token_type = 0;
+             if(token_type_precentage >= 500) {
+                token_type = 5;
+             } else if (token_type_precentage >= 400_u256) {
+                token_type = 4;
+             } else if (token_type_precentage >= 300_u256) {
+                token_type = 3;
+             } else if (token_type_precentage >= 200_u256) {
+                token_type = 2;
+             } else if (token_type_precentage >= 100_u256) {
+                token_type = 1;
+             }
+
              let token_rank_precentage = (token_rank_hash % 100).try_into().unwrap();
- 
              let mut token_rank: u8 = 0;
              if (token_rank_precentage < s_rate_by_pity) {
                  token_rank = 2_u8;
@@ -507,6 +536,11 @@ mod Collection {
                     IERC20CamelDispatcher { contract_address: eth_address }
                         .balanceOf(get_contract_address())
                 );
+        }
+
+        fn _equip(ref self: ContractState, token_id: u256) {
+            assert(self.erc721.ERC721_owners.read(token_id) == get_caller_address(), Errors::NOT_OWNER);
+            self.emit(NFTEquipped { account: get_caller_address(), token_id });
         }
     }
 

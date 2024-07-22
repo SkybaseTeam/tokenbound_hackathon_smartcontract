@@ -18,6 +18,7 @@ trait ICollection<TContractState> {
     fn get_token_metadata(self: @TContractState, token_id: u256) -> (u8, u8, u8);
     fn burn(ref self: TContractState, token_id: u256);
     fn claim(ref self: TContractState, eth_address: ContractAddress);
+    fn equip(ref self: TContractState, token_id: u256);
 }
 
 #[starknet::interface]

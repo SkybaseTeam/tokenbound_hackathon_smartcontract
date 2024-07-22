@@ -10,6 +10,13 @@ trait ICollection<TContractState> {
 trait IGacha<TContractState> {
     fn owner_of(self: @TContractState, token_id: u256) -> ContractAddress;
     fn get_token_metadata(self: @TContractState, token_id: u256) -> (u8, u8, u8);
+    fn equip(ref self: TContractState, token_id: u256);
+    fn unequip(ref self: TContractState, token_id: u256);
+}
+
+#[starknet::interface]
+trait IToken<TContractState> {
+    fn mint(ref self: TContractState, message_hash: felt252, signature_r: felt252, signature_s: felt252);
 }
 
 #[starknet::contract(account)]
@@ -30,7 +37,14 @@ mod Account {
         IAccount::IAccountActionCamel,
     };
     use openzeppelin::token::erc20::interface::{ IERC20Dispatcher, IERC20DispatcherTrait };
-    use super::{ ICollectionDispatcher, ICollectionDispatcherTrait, IGachaDispatcher, IGachaDispatcherTrait };
+    use super::{ 
+        ICollectionDispatcher,
+        ICollectionDispatcherTrait,
+        IGachaDispatcher,
+        IGachaDispatcherTrait,
+        ITokenDispatcher,
+        ITokenDispatcherTrait
+    };
 
     component!(path: AccountComponent, storage: account, event: AccountEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -99,8 +113,12 @@ mod Account {
             self._withdraw(token_contract);
         }
 
-        fn equip_item(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
-            return self._equip_item(token_address, token_id);
+        fn equip_item(ref self: ContractState, contract_address: ContractAddress, token_id: u256) -> (u256, ContractAddress) {
+            return self._equip_item(contract_address, token_id);
+        }
+
+        fn get_equipped_item(self: @ContractState, slot: u8) -> (u256, ContractAddress) {
+            return self._get_equipped_slot(slot);
         }
     }
 
@@ -114,8 +132,12 @@ mod Account {
             return self._mint_nft(nftContract, tokenContract);
         }
 
-        fn equipItem(ref self: ContractState, tokenAddress: ContractAddress, tokenId: u256) {
-            return self._equip_item(tokenAddress, tokenId);
+        fn equipItem(ref self: ContractState, contractAddress: ContractAddress, tokenId: u256) -> (u256, ContractAddress) {
+            return self._equip_item(contractAddress, tokenId);
+        }
+
+        fn getEquippedItem(self: @ContractState, slot: u8) -> (u256, ContractAddress) {
+            return self._get_equipped_slot(slot);
         }
     }
 
@@ -126,14 +148,9 @@ mod Account {
             assert(self.account._is_valid_signer(caller), AccountComponent::Errors::UNAUTHORIZED);
             let (lock_status, _) = self.account._is_locked();
             assert(!lock_status, AccountComponent::Errors::LOCKED_ACCOUNT);
-    
-            let mut calldata: Array<felt252> = ArrayTrait::new();
-            Serde::serialize(@message_hash, ref calldata);
-            Serde::serialize(@signature_r, ref calldata);
-            Serde::serialize(@signature_s, ref calldata);
-            let _res = call_contract_syscall(
-                token_contract, selector!("mint"), calldata.span()
-            );
+            
+            ITokenDispatcher { contract_address: token_contract }
+                .mint(message_hash, signature_r, signature_s);
         }
 
         fn _mint_nft(ref self: ContractState, nft_contract: ContractAddress, token_contract: ContractAddress) -> u256 {
@@ -174,16 +191,37 @@ mod Account {
                 );
         }
 
-        fn _equip_item(ref self: ContractState, token_address: ContractAddress, token_id: u256) {
-            let item_owner = IGachaDispatcher { contract_address: token_address }
+        fn _equip_item(ref self: ContractState, contract_address: ContractAddress, token_id: u256) -> (u256, ContractAddress) {
+            // Check owner
+            let caller = get_caller_address();
+            assert(self.account._is_valid_signer(caller), AccountComponent::Errors::UNAUTHORIZED);
+            let (lock_status, _) = self.account._is_locked();
+            assert(!lock_status, AccountComponent::Errors::LOCKED_ACCOUNT);
+    
+            // Check token owner
+            let token_owner = IGachaDispatcher { contract_address: contract_address }
                 .owner_of(token_id);
-            assert(item_owner == get_contract_address(), 'Errors::NOT_OWNER');
-            let (item_type, _, _) = IGachaDispatcher { contract_address: token_address }
+            assert(token_owner == get_contract_address(), 'Errors::INVALID_OWNER');
+    
+            // Check token metadata
+            let (token_type, _, _) = IGachaDispatcher { contract_address: contract_address }
                 .get_token_metadata(token_id);
-            self.equip_slots.write(item_type, EquipSlot {
+
+            self.equip_slots.write(token_type, EquipSlot {
                 token_id: token_id,
-                token_contract: token_address
+                token_contract: contract_address
             });
+
+            IGachaDispatcher { contract_address: contract_address }
+                .equip(token_id);
+
+            return (token_id, contract_address);
+        }
+
+        fn _get_equipped_slot(self: @ContractState, slot: u8) -> (u256, ContractAddress) {
+            assert(slot <= 6, 'Errors::INVALID_SLOT');
+            let equip_slot: EquipSlot = self.equip_slots.read(slot);
+            return (equip_slot.token_id, equip_slot.token_contract);
         }
     }
 }
