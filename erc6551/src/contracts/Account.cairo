@@ -206,7 +206,7 @@ mod Account {
             // Check token metadata
             let (token_type, _, _) = IGachaDispatcher { contract_address: contract_address }
                 .get_token_metadata(token_id);
-
+            assert(token_type < 6, 'Errors::INVALID_TOKEN_TYPE');
             self.equip_slots.write(token_type, EquipSlot {
                 token_id: token_id,
                 token_contract: contract_address
@@ -219,7 +219,7 @@ mod Account {
         }
 
         fn _get_equipped_slot(self: @ContractState, slot: u8) -> (u256, ContractAddress) {
-            assert(slot <= 6, 'Errors::INVALID_SLOT');
+            assert(slot < 6, 'Errors::INVALID_SLOT');
             let equip_slot: EquipSlot = self.equip_slots.read(slot);
             return (equip_slot.token_id, equip_slot.token_contract);
         }

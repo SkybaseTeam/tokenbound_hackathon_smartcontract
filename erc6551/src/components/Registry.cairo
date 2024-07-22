@@ -37,8 +37,8 @@ mod RegistryComponent {
     }
 
     mod Errors {
-        const CALLER_IS_NOT_OWNER: felt252 = 'Registry: caller is not onwer';
         const ACCOUNT_DEPLOYED: felt252 = 'Registry: account deployed';
+        const ACCOUNT_NOT_DEPLOYED: felt252 = 'Registry: account not deployed';
     }
 
     #[embeddable_as(RegistryImpl)]
@@ -158,6 +158,8 @@ mod RegistryComponent {
             token_contract: ContractAddress,
             token_id: u256
         ) -> ContractAddress {
+
+            assert(self.registry_deployed_accounts.read((token_contract, token_id)) > 0_u8, Errors::ACCOUNT_NOT_DEPLOYED);
 
             let salt = PedersenTrait::new(0)
                 .update(token_contract.into())
