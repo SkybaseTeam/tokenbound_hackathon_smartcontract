@@ -114,10 +114,10 @@ mod Collection {
 
         // Token URI
         self.token_uri_1.write('https://');
-        self.token_uri_2.write('grow-api.');
-        self.token_uri_3.write('memeland.com/');
-        self.token_uri_4.write('token/');
-        self.token_uri_5.write('metadata/');
+        self.token_uri_2.write('be-blingbling.');
+        self.token_uri_3.write('onrender.com/');
+        self.token_uri_4.write('metadata/');
+        self.token_uri_5.write('tba/');
 
         // Total supply
         self.total_supply.write(4000);
@@ -309,8 +309,7 @@ mod Collection {
                 self.token_uri_3.read(),
                 self.token_uri_4.read(),
                 self.token_uri_5.read(),
-                token_id_str,
-                '.json'
+                token_id_str
             ];
             token_uri.span()
         }

@@ -151,10 +151,10 @@ mod Collection {
 
         // Token URI
         self.token_uri_1.write('https://');
-        self.token_uri_2.write('image-hackathon');
-        self.token_uri_3.write('.onrender.com');
-        self.token_uri_4.write('/');
-        self.token_uri_5.write('metadata/');
+        self.token_uri_2.write('be-blingbling.');
+        self.token_uri_3.write('onrender.com/');
+        self.token_uri_4.write('metadata/');
+        self.token_uri_5.write('nft/');
 
         // Total supply
         self.total_supply.write(1000000000000000000000000);
@@ -284,13 +284,6 @@ mod Collection {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             let caller = get_caller_address();
             assert(caller == OWNER_ADDRESS.try_into().unwrap(), 'Error: UNAUTHORIZED');
-
-            self.token_uri_1.write('https://');
-            self.token_uri_2.write('image-hackathon');
-            self.token_uri_3.write('.onrender.com');
-            self.token_uri_4.write('/');
-            self.token_uri_5.write('metadata/');
-
             self.upgradeable._upgrade(new_class_hash);
         }
     }
