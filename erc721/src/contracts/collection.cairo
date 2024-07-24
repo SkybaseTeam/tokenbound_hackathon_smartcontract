@@ -113,9 +113,10 @@ mod Collection {
         self.erc721.initializer(name, symbol);
 
         // Token URI
+        // https://bird-eternal-strictly.ngrok-free.app/metadata/tba/{token_id}
         self.token_uri_1.write('https://');
-        self.token_uri_2.write('be-blingbling.');
-        self.token_uri_3.write('onrender.com/');
+        self.token_uri_2.write('bird-eternal-strictly.');
+        self.token_uri_3.write('ngrok-free.app/');
         self.token_uri_4.write('metadata/');
         self.token_uri_5.write('tba/');
 
